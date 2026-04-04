@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axon Environmental Impact Calculator</title>
+    <style>
+        /* Enterprise Styling */
+        :root {
+            --primary-blue: #005A9C;
+            --light-blue: #E6F0F9;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --bg-color: #ffffff;
+            --border-color: #e0e0e0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: transparent; /* Allows website background to show through if embedded */
+            color: var(--text-main);
+        }
+
+        .calculator-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        /* Top Animation Area */
+        .canvas-wrapper {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(to bottom, #ffffff, var(--light-blue));
+            display: block;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Content Area */
+        .content-section {
+            padding: 30px;
+        }
+
+        .explanation-block {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            margin-top: 0;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Sliders Layout */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 600px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .val-display {
+            color: var(--primary-blue);
+        }
+
+        /* Custom Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #d3d3d3;
+            border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* The Interactive Paragraph */
+        .math-breakdown {
+            background-color: var(--light-blue);
+            padding: 20px;
+            border-left: 4px solid var(--primary-blue);
+            border-radius: 0 4px 4px 0;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: var(--primary-blue);
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator-container">
+    <div class="canvas-wrapper">
+        <canvas id="waveCanvas"></canvas>
+    </div>
+
+    <div class="content-section">
+        <p class="explanation-block">
+            The Axon utilizes proprietary Intensity-Division Multiplexing to multiply fiber capacity. By replacing clusters of power-hungry SFP transceivers, a single Axon drastically reduces your data center's continuous power draw and the massive water overhead required for cooling.
+        </p>
+
+        <div class="controls-grid">
+            <div class="control-group">
+                <div class="control-header">
+                    <span>Axons Deployed</span>
+                    <span class="val-display" id="val-axons">10</span>
+                </div>
+                <input type="range" id="axons" min="1" max="500" value="10" step="1">
+            </div>
+
+            <div class="control-group">
+                <div class="control-header">
+                    <span>SFPs Replaced per Axon</span>
+                    <span class="val-display" id="val-sfps">10</span>
+                </div>
+                <input type="range" id="sfps" min="1" max="50" value="10" step="1">
+            </div>
+
+            <div class="control-group">
+                <div class="control-header">
+                    <span>Power per SFP (Watts)</span>
+                    <span class="val-display" id="val-power">1.0 W</span>
+                </div>
+                <input type="range" id="power" min="0.5" max="15.0" value="1.0" step="0.1">
+            </div>
+
+            <div class="control-group">
+                <div class="control-header">
+                    <span>Cooling (Gallons / kWh)</span>
+                    <span class="val-display" id="val-water">0.5 gal</span>
+                </div>
+                <input type="range" id="waterFactor" min="0.1" max="2.0" value="0.5" step="0.1">
+            </div>
+        </div>
+
+        <div class="math-breakdown" id="output-paragraph">
+            </div>
+    </div>
+</div>
+
+<script>
+    // --- STATE & DOM ELEMENTS ---
+    const inputs = {
+        axons: document.getElementById('axons'),
+        sfps: document.getElementById('sfps'),
+        power: document.getElementById('power'),
+        waterFactor: document.getElementById('waterFactor')
+    };
+
+    const displays = {
+        axons: document.getElementById('val-axons'),
+        sfps: document.getElementById('val-sfps'),
+        power: document.getElementById('val-power'),
+        waterFactor: document.getElementById('val-water')
+    };
+
+    const outputParagraph = document.getElementById('output-paragraph');
+    
+    // Global variable to hold calculated water savings for the animation
+    let currentWaterSaved = 0;
+
+    // --- MATH & UPDATE LOGIC ---
+    function calculateAndRender() {
+        const ax = parseFloat(inputs.axons.value);
+        const sfp = parseFloat(inputs.sfps.value);
+        const pwr = parseFloat(inputs.power.value);
+        const wf = parseFloat(inputs.waterFactor.value);
+
+        // Update labels
+        displays.axons.innerText = ax.toLocaleString();
+        displays.sfps.innerText = sfp.toLocaleString();
+        displays.power.innerText = pwr.toFixed(1) + " W";
+        displays.waterFactor.innerText = wf.toFixed(1) + " gal";
+
+        // Calculations
+        const totalSFPs = ax * sfp;
+        const annualEnergykWh = (totalSFPs * pwr / 1000) * 8760; // 8760 hours in a year
+        const annualWaterGal = annualEnergykWh * wf;
+        
+        currentWaterSaved = annualWaterGal; // Update global for the wave canvas
+
+        // Update the Interactive Paragraph
+        outputParagraph.innerHTML = `
+            How we calculate this: <span class="highlight">${ax.toLocaleString()}</span> Axons replace 
+            <span class="highlight">${totalSFPs.toLocaleString()}</span> SFPs. At 
+            <span class="highlight">${pwr.toFixed(1)}W</span> each, running 24/7 (8,760 hours/year), that saves 
+            <span class="highlight">${Math.round(annualEnergykWh).toLocaleString()}</span> kWh of electricity. 
+            With a cooling cost of <span class="highlight">${wf.toFixed(1)}</span> gallons per kWh, the data center saves 
+            <span class="highlight">${Math.round(annualWaterGal).toLocaleString()}</span> gallons of water annually.
+        `;
+    }
+
+    // Attach listeners to sliders
+    Object.values(inputs).forEach(input => {
+        input.addEventListener('input', calculateAndRender);
+    });
+
+    // --- CANVAS WAVE ANIMATION ---
+    const canvas = document.getElementById('waveCanvas');
+    const ctx = canvas.getContext('2d');
+    let time = 0;
+
+    function resizeCanvas() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); // Initial sizing
+
+    function animateWave() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Define max expected water savings to scale the wave dynamically
+        // (500 axons * 50 SFPs * 15 W / 1000) * 8760 * 2.0 gal = ~6,570,000 max
+        const maxExpectedWater = 6570000; 
+        const intensity = Math.min(currentWaterSaved / maxExpectedWater, 1);
+
+        // Wave parameters based on intensity
+        // Base amplitude of 5, grows up to 45 based on savings
+        const amplitude = 5 + (intensity * 40); 
+        // Base speed, gets faster as savings increase
+        const speed = 0.02 + (intensity * 0.04); 
+        
+        time += speed;
+
+        // Draw 3 overlapping waves for a fluid effect
+        const waves = [
+            { color: 'rgba(0, 90, 156, 0.2)', offset: 0, ampMult: 1.0 },
+            { color: 'rgba(0, 120, 200, 0.4)', offset: 2, ampMult: 0.8 },
+            { color: 'rgba(0, 150, 230, 0.6)', offset: 4, ampMult: 0.6 }
+        ];
+
+        waves.forEach(wave => {
+            ctx.beginPath();
+            // Start below the canvas
+            ctx.moveTo(0, canvas.height); 
+            
+            // Draw the wave across the width
+            for (let x = 0; x <= canvas.width; x += 10) {
+                // Sine function for smooth wave
+                const y = (canvas.height - 30) - Math.sin((x * 0.01) + time + wave.offset) * (amplitude * wave.ampMult);
+                ctx.lineTo(x, y);
+            }
+            
+            // Close the path to fill the bottom
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.fillStyle = wave.color;
+            ctx.fill();
+        });
+
+        requestAnimationFrame(animateWave);
+    }
+
+    // Initialize
+    calculateAndRender();
+    animateWave();
+
+</script>
+</body>
+</html>
