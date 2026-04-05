@@ -267,8 +267,8 @@
         const intensity = Math.min(currentWaterSaved / maxExpectedWater, 1);
 
         // Wave parameters based on intensity
-        // Base amplitude of 5, grows up to 45 based on savings
-        const amplitude = 25 + (intensity * 80); 
+        // Base amplitude of 5, grows based on savings
+        const amplitude = 25 + (intensity * 280); 
         // Base speed, gets faster as savings increase
         const speed = 0.02 + (intensity * 0.04); 
         
