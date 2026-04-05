@@ -147,7 +147,7 @@
 
     <div class="content-section">
         <p class="explanation-block">
-            The Axon utilizes proprietary Intensity-Division Multiplexing to multiply fiber capacity. By replacing clusters of power-hungry SFP transceivers, a single Axon drastically reduces your data center's continuous power draw and the massive water overhead required for cooling.
+            When the Axon increases fiber capacity, it also replaces power-hungry hardware and protects water that would have been used to cool that hardware.
         </p>
 
         <div class="controls-grid">
@@ -230,6 +230,18 @@
         
         currentWaterSaved = annualWaterGal; // Update global for the wave canvas
 
+        // --- NEW THRESHOLD LOGIC ---
+        let ecosystemText = "";
+        if (annualWaterGal >= 1500000) {
+            ecosystemText = "<br><br><em>That is equivalent to a vibrant small lake, capable of supporting a complex ecosystem of fish, migratory waterfowl, and thriving aquatic plant life.</em>";
+        } else if (annualWaterGal >= 500000) {
+            ecosystemText = "<br><br><em>That is equivalent to the annual flow of a natural stream, capable of sustaining local amphibians, otters, and native riverbank flora.</em>";
+        } else if (annualWaterGal >= 100000) {
+            ecosystemText = "<br><br><em>That is equivalent to a healthy natural pond, capable of supporting frogs, turtles, and seasonal bird populations.</em>";
+        } else if (annualWaterGal >= 25000) {
+            ecosystemText = "<br><br><em>That is equivalent to a large wetland pool, providing vital hydration for local insects, songbirds, and small mammals.</em>";
+        }
+
         // Update the Interactive Paragraph
         outputParagraph.innerHTML = `
             How we calculate this: <span class="highlight">${ax.toLocaleString()}</span> Axons replace 
@@ -238,6 +250,7 @@
             <span class="highlight">${Math.round(annualEnergykWh).toLocaleString()}</span> kWh of electricity. 
             With a cooling cost of <span class="highlight">${wf.toFixed(1)}</span> gallons per kWh, the data center saves 
             <span class="highlight">${Math.round(annualWaterGal).toLocaleString()}</span> gallons of water annually.
+            ${ecosystemText}
         `;
     }
 
